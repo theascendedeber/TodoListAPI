@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: todolist-db
+    environment:
+        POSTGRES_USER: postgre
+        POSTGRES_PASSWORD: postgre
+        POSTGRES_DB: postgre
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    networks:
+      - my-network
+
+volumes:
+  postgres_data:
+
+networks:
+  my-network:
+    driver: bridge
