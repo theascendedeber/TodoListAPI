@@ -4,9 +4,11 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/theascendedeber/TodoListAPI/models"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -25,21 +27,39 @@ func PasswordCheck(password, hashPassword []byte) (bool, error) {
 	return true, nil
 }
 
-func GenerateJWT(id_user int, name_user string) string {
-	secret := "some_secret123"
+func GenerateJWT(userID int64) (string, error) {
+	secret := "SuperSecret123"
+	header := models.JWTHeader{
+		Alg: "HS256",
+		Typ: "JWT",
+	}
 
-	header := "{\"alg\": \"HS256\", \"typ\": \"JWT\"}"
-	encodeHeader := base64.RawURLEncoding.EncodeToString([]byte(header))
+	payload := models.JWTPayload{
+		Sub: userID,
+		Exp: time.Now().Add(time.Minute * 15).Unix(),
+	}
 
-	iat := time.Now().Unix()
-	payload := fmt.Sprintf("{\"sub\":%d, \"name\":%s, \"iat\":%d}", id_user, name_user, iat)
-	encodedPayload := base64.RawURLEncoding.EncodeToString([]byte(payload))
+	headerJSON, err := json.Marshal(header)
+	if err != nil {
+		return "", err
+	}
 
-	data := fmt.Sprintf("%s.%s", encodeHeader, encodedPayload)
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+
+	encodedHeader := base64.RawURLEncoding.EncodeToString(headerJSON)
+	encodedPayload := base64.RawURLEncoding.EncodeToString(payloadJSON)
+	signature := createSignature(encodedHeader, encodedPayload, secret)
+
+	return fmt.Sprintf("%s.%s.%s", encodedHeader, encodedPayload, signature), nil
+}
+
+func createSignature(header, payload, secret string) string {
+	data := fmt.Sprintf("%s.%s", header, payload)
 	h := hmac.New(sha256.New, []byte(secret))
 	h.Write([]byte(data))
-	signature := base64.RawURLEncoding.EncodeToString(h.Sum(nil))
 
-	token := fmt.Sprintf("%s.%s.%s", encodeHeader, encodedPayload, signature)
-	return token
+	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))
 }
