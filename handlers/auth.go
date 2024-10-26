@@ -10,7 +10,7 @@ import (
 const (
 	requestCreateUser           = "INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id"
 	requestGetCountUsersByEmail = "SELECT COUNT(*) FROM users WHERE email = $1"
-	requestGetUserByEmail       = "SELECT * FROM users WHERE email = $1"
+	requestGetUserByEmail       = "SELECT id, password FROM users WHERE email = $1"
 )
 
 func RegisterUser(c *fiber.Ctx) error {
@@ -47,14 +47,28 @@ func RegisterUser(c *fiber.Ctx) error {
 	return c.Status(201).JSON(fiber.Map{"token": token})
 }
 
-//
-// func LoginUser(c *fiber.Ctx) error {
-// 	user := new(models.User)
-//   var dataUser models.User
-//
-// 	if err := c.BodyParser(user); err != nil {
-// 		return c.Status(400).SendString("Неверный формат запроса")
-// 	}
-//
-// 	row := database.DB.QueryRow(requestGetUserByEmail, user.Email).Scan()
-// }
+func LoginUser(c *fiber.Ctx) error {
+	loginRequest := new(models.LoginRequest)
+	var loginResponse models.LoginResponse
+
+	if err := c.BodyParser(loginRequest); err != nil {
+		return c.Status(400).SendString("Неверный формат запроса")
+	}
+
+	err := database.DB.QueryRow(requestGetUserByEmail, loginRequest.Email).Scan(&loginResponse.ID, &loginResponse.Password)
+	if err != nil {
+		return c.Status(500).SendString("Ошибка при запросе к БД")
+	}
+
+	truePassword := utils.VerifyPassword([]byte(loginRequest.Password), []byte(loginResponse.Password))
+	if !truePassword {
+		return c.Status(401).SendString("Неверные авторизационные данные")
+	}
+
+	token, err := utils.GenerateJWT(loginResponse.ID)
+	if err != nil {
+		return c.Status(500).SendString("Ошибка при генерации токена")
+	}
+
+	return c.Status(200).JSON(fiber.Map{"token": token})
+}

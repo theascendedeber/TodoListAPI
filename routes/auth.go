@@ -9,5 +9,5 @@ func RegisterAuthRoutes(app *fiber.App) {
 	auth := app.Group("/auth")
 
 	auth.Post("/register", handlers.RegisterUser)
-	// auth.Post("/login", handlers.LoginUser)
+	auth.Post("/login", handlers.LoginUser)
 }

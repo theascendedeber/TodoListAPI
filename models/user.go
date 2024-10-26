@@ -5,3 +5,13 @@ type User struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
+
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type LoginResponse struct {
+	ID       int64  `json:"id"`
+	Password string `json:"password"`
+}
